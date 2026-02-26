@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../services/product_service.dart';
-import 'user_list_screen.dart';
+import '../services/user_api_service.dart'; //
+import 'user_list_screen.dart'; //
+import 'product_list_screen.dart'; // เพิ่ม import ไฟล์ใหม่ที่เพิ่งสร้าง
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,22 +28,56 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // จำลองการโหลดข้อมูลก่อนตรวจสอบสิทธิ์
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      final apiService = UserApiService();
+      final users = await apiService.fetchUsers();
 
-    if (mounted) {
-      if (username == 'johnd' && password == '1234') {
-        // กรณีเป็น Admin: ส่งไปหน้าจัดการ User (CRUD) ตามเอกสาร [cite: 3, 22]
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const UserListScreen()),
+      try {
+        final user = users.firstWhere(
+          (u) => u.username == username && u.password == password,
         );
-      } else {
-        // กรณีไม่ใช่ Admin: ส่งไปหน้าแสดงสินค้า [cite: 23]
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ProductPreviewScreen()),
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ยินดีต้อนรับคุณ ${user.username}')),
+          );
+
+          // ตรวจสอบสิทธิ์: id = 1 เป็น Admin ไปหน้า UserList
+          if (user.id == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const UserListScreen()),
+            );
+          } else {
+            // กรณีไม่ใช่ Admin ไปหน้า ProductList (ไฟล์ใหม่)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ProductListScreen()),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -103,88 +136,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// --- หน้าแสดงสินค้าสำหรับ User ทั่วไป ---
-class ProductPreviewScreen extends StatelessWidget {
-  const ProductPreviewScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Product Gallery"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const LoginScreen())
-            ),
-          )
-        ],
-      ),
-      body: FutureBuilder<List<dynamic>>(
-        // ดึงข้อมูลสินค้าจาก ProductService [cite: 16]
-        future: ProductService().fetchProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          final products = snapshot.data ?? [];
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: products.length,
-            itemBuilder: (context, i) {
-              return Card(
-                elevation: 2,
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        color: Colors.white,
-                        child: Image.network(products[i]['image'], fit: BoxFit.contain),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            products[i]['title'],
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "\$${products[i]['price']}",
-                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }
