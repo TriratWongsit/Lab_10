@@ -1,0 +1,29 @@
+name: fakestore_286
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ไอคอนพื้นฐานของ iOS [cite: 29]
+  cupertino_icons: ^1.0.8
+
+  # Package สำหรับเชื่อมต่อกับ FakeStoreAPI [cite: 30]
+  http: ^1.6.0
+
+  # Package สำหรับจัดการ State ระหว่างหน้า Login และหน้าอื่นๆ [cite: 31]
+  provider: ^6.1.5+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  # เปิดใช้งาน Material Design เพื่อให้หน้า Login และ List สวยงาม [cite: 662]
+  uses-material-design: true
